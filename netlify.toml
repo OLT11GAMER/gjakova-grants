@@ -2,6 +2,11 @@
 command = "npm run build"
 publish = "dist"
 
+[build.environment]
+# The model identifier is public configuration, not a credential. Keep scanning
+# enabled for actual secrets such as AI_API_KEY.
+SECRETS_SCAN_OMIT_KEYS = "AI_MODEL"
+
 [functions]
 directory = "netlify/functions"
 

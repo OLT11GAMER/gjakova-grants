@@ -15,7 +15,7 @@ import {
   Settings2,
   UserRound,
 } from "lucide-react";
-import { Brand, RoleSwitcher } from "../components/RoleSwitcher";
+import { Brand, RoleSwitcher, TutorialLink } from "../components/RoleSwitcher";
 import {
   CaseSummary,
   CaseTimeline,
@@ -274,7 +274,7 @@ export function StaffApp({ route, calls, applications, applicants, archiveHandof
     <div className="staff-shell">
       <StaffSidebar submittedCount={submittedApplications.length} active={tab === "archive" ? "archive" : "applications"} applicationId={application?.id ?? submittedApplications[0]?.id} />
       <div className="staff-workspace">
-        <header className="staff-topbar"><span className="staff-topbar__context">Hapësira e stafit</span><RoleSwitcher role="staff" onReset={onReset} /></header>
+        <header className="staff-topbar"><span className="staff-topbar__context">Hapësira e stafit</span><TutorialLink /><RoleSwitcher role="staff" onReset={onReset} /></header>
         <main className="staff-main" id="main-content">{application && call && applicant ? <CaseDetail application={application} call={call} applicant={applicant} tab={tab} handoff={handoff} online={online} actions={actions} /> : <Queue applications={submittedApplications} calls={calls} applicants={applicants} />}</main>
       </div>
     </div>

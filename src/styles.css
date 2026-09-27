@@ -640,6 +640,12 @@ p { color: var(--ink-soft); line-height: 1.6; }
 .presentation-menu__divider { height: 1px; margin: 5px 2px; background: var(--border); }
 .presentation-menu__panel small { padding: 7px 10px 4px; color: var(--muted); font-size: .7rem; line-height: 1.35; }
 .presentation-menu__panel > p { margin: 4px 10px 1px; color: var(--muted); font-size: .68rem; font-weight: 650; }
+.applicant-topbar, .staff-topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; }
+.applicant-topbar .presentation-menu, .staff-topbar .presentation-menu { justify-self: end; margin-left: 0; }
+.staff-topbar .tutorial-nav-link { grid-column: 2; }
+.staff-topbar .presentation-menu { grid-column: 3; }
+.tutorial-nav-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 7px; color: var(--brand-800); font-size: .82rem; font-weight: 650; text-decoration: none; white-space: nowrap; }
+.tutorial-nav-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .grant-grid--single { grid-template-columns: minmax(0, 460px); }
 .grant-card { min-height: 0; gap: 18px; padding: 22px; }
 .grant-card__meta { gap: 20px; margin: 4px 0 0; padding-top: 16px; border-top: 1px solid var(--border); }
@@ -781,6 +787,7 @@ p { color: var(--ink-soft); line-height: 1.6; }
 @media (max-width: 1050px) { .staff-review-layout { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 780px) { .staff-review-layout, .version-comparison__grid { grid-template-columns: 1fr; } .call-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .staff-topbar .presentation-menu { margin-left: auto; } }
 @media (max-width: 520px) { .grant-card, .call-detail-hero { border-radius: 0; } .grant-card { border-radius: 10px; } .call-facts { gap: 16px; } .document-sheet__page { width: calc(100% - 20px); margin: 10px auto; padding: 16px; } .application-stepper a { font-size: .78rem; } .manifest-facts div { border-right: 0 !important; } }
+@media (max-width: 380px) { .tutorial-nav-link { gap: 5px; font-size: .75rem; } .tutorial-nav-link svg { width: 16px; height: 16px; } }
 @media (max-width: 520px) {
   .scanner-backdrop { padding: 0; }
   .scanner-dialog { width: 100%; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; padding-bottom: env(safe-area-inset-bottom); }

@@ -20,7 +20,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Brand, RoleSwitcher } from "../components/RoleSwitcher";
+import { Brand, RoleSwitcher, TutorialLink } from "../components/RoleSwitcher";
 import {
   EvidencePanel,
   CaseTimeline,
@@ -96,6 +96,7 @@ function ApplicantHeader({ onReset }: { onReset: () => void }) {
   return (
     <header className="applicant-topbar">
       <Brand />
+      <TutorialLink />
       <RoleSwitcher role="applicant" onReset={onReset} />
     </header>
   );

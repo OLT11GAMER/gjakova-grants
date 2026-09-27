@@ -1,4 +1,4 @@
-import { Building2, Ellipsis, RotateCcw, Smartphone } from "lucide-react";
+import { Building2, CirclePlay, Ellipsis, RotateCcw, Smartphone } from "lucide-react";
 import { PwaInstallAction } from "./PwaControls";
 
 export type DemoRole = "applicant" | "staff";
@@ -7,6 +7,15 @@ export function Brand() {
   return (
     <a className="brand" href="#/applicant/opportunities" aria-label="Gjakova Grants — ballina">
       <img src="/brand/gjakova-grants-logo-original.svg" alt="Gjakova Grants" />
+    </a>
+  );
+}
+
+export function TutorialLink() {
+  return (
+    <a className="tutorial-nav-link" href="https://youtu.be/75hdDYJGoLs" target="_blank" rel="noopener noreferrer" aria-label="Shiko videon demo në YouTube">
+      <CirclePlay size={18} aria-hidden="true" />
+      <span>Video demo</span>
     </a>
   );
 }

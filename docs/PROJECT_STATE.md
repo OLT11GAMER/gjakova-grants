@@ -2,7 +2,7 @@
 
 ## Verified public deployment — 27 September 2026
 
-**Status: DEPLOYED AND VERIFIED.** Public demo: https://gjakova-grants.netlify.app. Netlify site: `gjakova-grants` (site ID `e4f96861-f0f8-428e-a6b7-913ee16064de`). Deployment mode: **CLI DEPLOYMENT**; no Git connection or continuous deployment is configured. Draft tested: https://6ab8a40ddac3132856edcc53--gjakova-grants.netlify.app. GitHub: https://github.com/AI4Society-Hachathon/Team-Pooks, branch `main`; the application/deployment source commit was `785b3266ad8fcc8c5078c78d7749bc0080a624c9`. The verified deployment documentation follow-up was pushed after the initial source commit, and production was redeployed from that final documented tree. Verification timestamp: 2026-09-27 (UTC; final checks completed after 05:25 UTC).
+**Status: PUBLIC DEMO DEPLOYED AND VERIFIED; PERSONAL MIRROR PUSHED.** Official team repository: https://github.com/AI4Society-Hachathon/Team-Pooks. Personal public mirror: https://github.com/OLT11GAMER/gjakova-grants. Both branches `main` are verified at commit `d6d63d1380fe899a0efc347231e23e4903704a10` as of this verification. Netlify public demo: https://gjakova-grants.netlify.app. Netlify site: `gjakova-grants` (site ID `e4f96861-f0f8-428e-a6b7-913ee16064de`). Current deployment mode: **CLI DEPLOYMENT** from the verified tree; the site is not yet Git-connected to the personal mirror. Draft tested: https://6ab8a40ddac3132856edcc53--gjakova-grants.netlify.app. Verification timestamp: 2026-09-27 05:45 UTC. To enable the requested Git-connected deployment source, Netlify must be authorized to configure GitHub webhooks and deploy keys for the personal repository; this authorization remains pending.
 
 **AI PROVENANCE: SIMULATED. LIVE AI: NOT VERIFIED.** Netlify function runtime has `AI_DEMO_FIXTURE=1` for production and deploy previews. No live AI key was configured. The public read action returned JSON with `provenance: simulated`; there was no upstream AI request. No runtime secret value is recorded here.
 
@@ -18,7 +18,7 @@
 
 **Build/security:** `npm run typecheck`, `npm run build`, and `npm audit --audit-level=high` passed; audit reported zero vulnerabilities. Production client assets did not expose an AI key, `sk-` credential, bearer secret, Netlify token or local `.env` value. The browser called `/api/document-assist` on the Netlify site. No applicant records, raw API response logs, or server prompt were found in public client assets.
 
-**Limits:** This is a synthetic, browser-local demo, not an official filing, SMAED integration, authentication system, secure audit trail, durable storage, or cross-device workflow. Live AI has not been verified.
+**Limits:** This is a Team Pooks hackathon prototype with synthetic, browser-local demo state, not an official Municipality of Gjakova production service, filing, SMAED integration, authentication system, secure audit trail, durable storage, or cross-device workflow. Live AI has not been verified. The Netlify GitHub connection to the personal public mirror remains pending account authorization; until it is authorized, deployments use the CLI.
 
 ## Milestone 5 presentation/release-readiness pass — 27 September 2026
 

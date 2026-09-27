@@ -18,9 +18,9 @@ export function validateApplicantDetails(
   if (!details.displayName.trim()) errors.displayName = "Shkruaj emrin e aplikuesit.";
   if (!details.organization.trim()) errors.organization = "Shkruaj emrin e veprimtarisë.";
   if (!details.municipality.trim()) errors.municipality = "Shkruaj komunën.";
-  if (!emailPattern.test(details.email.trim())) errors.email = "Shkruaj një email demonstrues të vlefshëm.";
-  if (!details.phone.trim()) errors.phone = "Shkruaj telefonin demonstrues.";
-  if (!details.businessNumber.trim()) errors.businessNumber = "Shkruaj numrin demonstrues të biznesit.";
+  if (!emailPattern.test(details.email.trim())) errors.email = "Shkruaj një email të vlefshëm.";
+  if (!details.phone.trim()) errors.phone = "Shkruaj telefonin.";
+  if (!details.businessNumber.trim()) errors.businessNumber = "Shkruaj numrin e biznesit.";
   return errors;
 }
 

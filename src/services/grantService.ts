@@ -19,8 +19,8 @@ export const DEMO_STORAGE_KEY = "gjakova-grants.demo.v3";
 export const LEGACY_STORAGE_KEY = "gjakova-grants.demo.v2";
 
 const clone = <T,>(value: T): T => structuredClone(value);
-const municipalActor = "Zyrtare komunale · DEMO";
-const applicantActor = "Aplikues demonstrues";
+const municipalActor = "Staf komunal";
+const applicantActor = "Aplikuesi";
 
 type LegacySnapshot = Omit<SubmittedSnapshot, "checkResults"> & {
   checkResults?: CheckResult[];
@@ -107,13 +107,13 @@ const shouldSimulateFailure = () =>
 
 const guardFixtureService = () => {
   if (shouldSimulateFailure()) {
-    throw new Error("Shërbimi demonstrues nuk u ngarkua. Provo përsëri.");
+    throw new Error("Nuk mund të ngarkohen të dhënat. Provo përsëri.");
   }
 };
 
 const guardOnlineMutation = () => {
   if (!window.navigator.onLine) {
-    throw new Error("Pa lidhje, demonstrimi është vetëm për lexim. Ndryshimet nuk u ruajtën.");
+    throw new Error("Pa lidhje, faqja është vetëm për lexim. Ndryshimet nuk u ruajtën.");
   }
 };
 
@@ -129,7 +129,7 @@ const commit = (mutate: (next: DemoDataset) => void): DemoDataset => {
 const getApplicationAndCall = (dataset: DemoDataset) => {
   const application = dataset.applications[0];
   const call = dataset.calls.find((item) => item.id === application?.callId);
-  if (!application || !call) throw new Error("Rasti demonstrues nuk u gjet.");
+  if (!application || !call) throw new Error("Aplikimi nuk u gjet.");
   return { application, call };
 };
 
@@ -141,7 +141,7 @@ const guardDraft = (application: Application) => {
   guardStatus(
     application,
     "draft",
-    "Dorëzimi demonstrues është mbyllur. Përdor resetimin për ta nisur përsëri.",
+    "Aplikimi është përfunduar. Përdor rivendosjen për ta nisur përsëri.",
   );
 };
 
@@ -152,7 +152,7 @@ const refreshChecks = (application: Application, call: GrantCall, now: string) =
 
 const addEvent = (application: Application, event: CaseEvent) => {
   if (application.events.some((item) => item.id === event.id)) {
-    throw new Error("Ky veprim demonstrues është regjistruar tashmë.");
+    throw new Error("Ky veprim është regjistruar tashmë.");
   }
   application.events.push(event);
 };
@@ -161,7 +161,7 @@ const getCorrection = (application: Application) => {
   const correction = application.correctionRequests.find(
     (item) => item.requirementId === "req-offer",
   );
-  if (!correction) throw new Error("Kërkesa demonstrative për korrigjim nuk u gjet.");
+  if (!correction) throw new Error("Kërkesa për korrigjim nuk u gjet.");
   return correction;
 };
 
@@ -328,6 +328,40 @@ export const grantService = {
     });
   },
 
+  addScannedOffer(imageDataUrl: string): DemoDataset {
+    return commit((next) => {
+      const { application, call } = getApplicationAndCall(next);
+      guardDraft(application);
+      if (!imageDataUrl.startsWith("data:image/jpeg;base64,") || imageDataUrl.length > 520_000) {
+        throw new Error("Fotografia nuk mund të ruhet. Provo një prerje më të vogël.");
+      }
+      const requirementId = "req-offer";
+      if (!call.requirements.some((item) => item.id === requirementId)) throw new Error("Kërkesa për ofertë nuk u gjet.");
+      const activeId = application.activeDocumentVersionIds[requirementId];
+      const active = application.documents.find((document) => document.id === activeId);
+      const version = Math.max(0, ...application.documents.filter((document) => document.requirementId === requirementId).map((document) => document.version)) + 1;
+      const id = `${requirementId}-v${version}`;
+      application.documents.push({
+        id,
+        documentId: `demo-${requirementId}`,
+        requirementId,
+        version,
+        fileName: `Oferta_e_skanuar_v${version}.jpg`,
+        mimeType: "image/jpeg",
+        sizeLabel: `${Math.max(1, Math.round(imageDataUrl.length * 0.75 / 1024))} KB`,
+        createdAt: new Date().toISOString(),
+        createdBy: "synthetic-applicant",
+        supersedesVersionId: active?.id,
+        demoOnly: true,
+        templateId: "template-offer-basic",
+        scanImageDataUrl: imageDataUrl,
+      });
+      application.activeDocumentVersionIds[requirementId] = id;
+      application.demoSubmissionAcknowledged = false;
+      refreshChecks(application, call, new Date().toISOString());
+    });
+  },
+
   removeDemoDocument(requirementId: string): DemoDataset {
     return commit((next) => {
       const { application, call } = getApplicationAndCall(next);
@@ -379,10 +413,10 @@ export const grantService = {
       guardDraft(application);
       const readiness = getReadiness(application, call);
       if (!readiness.ready) {
-        throw new Error("Plotëso kërkesat e detyrueshme para dorëzimit demonstrues.");
+        throw new Error("Plotëso kërkesat e detyrueshme para përfundimit.");
       }
       if (!application.demoSubmissionAcknowledged) {
-        throw new Error("Konfirmo që ky është vetëm dorëzim demonstrues.");
+        throw new Error("Konfirmo deklaratën para përfundimit.");
       }
 
       const now = new Date().toISOString();
@@ -406,8 +440,8 @@ export const grantService = {
       refreshChecks(application, call, now);
       application.status = "submitted-demo";
       application.submittedAt = now;
-      application.assignedReviewer = "Pa caktuar · demonstrim";
-      application.pendingIssue = "Pret fillimin e shqyrtimit demonstrues";
+      application.assignedReviewer = "Pa caktuar";
+      application.pendingIssue = "Pret shqyrtimin";
       application.submittedSnapshot = {
         createdAt: now,
         callVersionId: call.versions[0]?.id ?? "gjakova-startup-2026-v1",
@@ -435,7 +469,7 @@ export const grantService = {
       const now = new Date().toISOString();
       application.status = "under-review-demo";
       application.assignedReviewer = municipalActor;
-      application.pendingIssue = "Kontrollo ofertën / profaturën sintetike";
+      application.pendingIssue = "Kontrollo ofertën / profaturën";
       addEvent(application, {
         id: "event-review-started",
         applicationId: application.id,
@@ -463,15 +497,15 @@ export const grantService = {
 
       const now = new Date().toISOString();
       application.status = "needs-correction-demo";
-      application.pendingIssue = "Aplikuesi duhet të dërgojë ofertën e detajuar sintetike";
+      application.pendingIssue = "Pret ofertën e korrigjuar";
       application.correctionRequests.push({
         id: "correction-offer-001",
         applicationId: application.id,
         requirementId: "req-offer",
         questionedDocumentVersionId: originalId,
         status: "open",
-        applicantMessage: "Ju lutem zëvendësoni ofertën me versionin demonstrues që tregon qartë pajisjen, sasinë dhe çmimin përkatës.",
-        internalNote: "Kontroll demonstrues: versioni fillestar nuk i paraqet qartë sasinë dhe çmimin për secilën pajisje.",
+        applicantMessage: "Ju lutem dërgoni një version të ofertës që tregon qartë pajisjen, sasinë dhe çmimin përkatës.",
+        internalNote: "Versioni fillestar nuk i paraqet qartë sasinë dhe çmimin për secilën pajisje.",
         requestedAt: now,
         requestedBy: "synthetic-municipal-clerk",
       });
@@ -534,7 +568,7 @@ export const grantService = {
       correction.respondedAt = now;
       correction.respondedBy = "synthetic-applicant";
       application.status = "correction-submitted-demo";
-      application.pendingIssue = "Korrigjimi i ofertës pret shqyrtim demonstrues";
+      application.pendingIssue = "Korrigjimi pret shqyrtim";
       application.checks = application.checks.map((check) => check.requirementId === correction.requirementId
         ? {
             ...check,
@@ -617,7 +651,7 @@ export const grantService = {
       guardStatus(application, "correction-reviewed-demo", "Paketa mund të përgatitet vetëm pasi korrigjimi të jetë shqyrtuar.");
       const handoff = next.archiveHandoffs.find((item) => item.applicationId === application.id);
       if (!handoff || handoff.status !== "ready-to-prepare") {
-        throw new Error("Paketa demonstrative është përgatitur tashmë ose nuk është ende gati.");
+        throw new Error("Paketa është përgatitur tashmë ose nuk është ende gati.");
       }
       const now = new Date().toISOString();
       addEvent(application, {

@@ -49,13 +49,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const markOnline = () => setOnline(true);
+    const verifyOnline = async () => {
+      if (!window.navigator.onLine) { setOnline(false); return; }
+      try {
+        await fetch(`/manifest.webmanifest?connectivity=${Date.now()}`, { method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(5000) });
+        setOnline(true);
+      } catch {
+        setOnline(false);
+      }
+    };
+    const markOnline = () => { void verifyOnline(); };
     const markOffline = () => setOnline(false);
     window.addEventListener("online", markOnline);
     window.addEventListener("offline", markOffline);
+    window.addEventListener("focus", markOnline);
+    void verifyOnline();
     return () => {
       window.removeEventListener("online", markOnline);
       window.removeEventListener("offline", markOffline);
+      window.removeEventListener("focus", markOnline);
       if (announcementTimer.current) window.clearTimeout(announcementTimer.current);
     };
   }, []);
@@ -74,7 +86,7 @@ export default function App() {
   const resetDemo = () => {
     setDataset(grantService.reset());
     window.location.hash = "/applicant/opportunities";
-    announce("Vetëm të dhënat sintetike të Gjakova Grants u rikthyen në draftin fillestar.");
+    announce("Aplikimi u rivendos.");
   };
 
   const applicantActions: ApplicantActions = {
@@ -82,16 +94,17 @@ export default function App() {
       mutate(() => grantService.updateApplicationDetails(patch));
     },
     reusePassport: () => {
-      mutate(() => grantService.reusePassportDetails(), "Të dhënat u kopjuan nga Pasaporta në draft.");
+      mutate(() => grantService.reusePassportDetails(), "Të dhënat u kopjuan nga profili.");
     },
     updatePassport: (patch: Partial<ApplicationApplicantDetails>) => {
       mutate(() => grantService.updatePassport(patch));
     },
     selectDocument: (requirementId: string, templateId: string) => {
-      mutate(() => grantService.selectDemoDocument(requirementId, templateId), "Dokumenti demonstrues u ruajt në draft.");
+      mutate(() => grantService.selectDemoDocument(requirementId, templateId), "Dokumenti u ruajt.");
     },
+    addScannedOffer: (imageDataUrl: string) => mutate(() => grantService.addScannedOffer(imageDataUrl), "Dokumenti u shtua."),
     removeDocument: (requirementId: string) => {
-      mutate(() => grantService.removeDemoDocument(requirementId), "Dokumenti u hoq nga drafti; versionet e mëparshme mbeten vetëm në historikun lokal.");
+      mutate(() => grantService.removeDemoDocument(requirementId), "Dokumenti u hoq.");
     },
     saveDocumentAssist: (versionId: string, record: DocumentAssistRecord) => mutate(() => grantService.saveDocumentAssist(versionId, record)),
     confirmDocumentAssist: (versionId: string, values: Record<DocumentAssistFieldName, string>) => mutate(() => grantService.confirmDocumentAssist(versionId, values), "Të dhënat e dokumentit u ruajtën si konfirmim nga aplikuesi."),
@@ -100,22 +113,22 @@ export default function App() {
     },
     submit: () => mutate(
       () => grantService.submitDemoApplication(),
-      "Dorëzimi demonstrues u regjistrua lokalisht. Asgjë nuk iu dërgua komunës.",
+      "Aplikimi u ruajt. Nuk u dërgua te komuna.",
     ),
     respondToCorrection: () => mutate(
       () => grantService.submitOfferCorrection(),
-      "Oferta sintetike e korrigjuar u dërgua për shqyrtim lokal. Origjinali mbetet i ruajtur.",
+      "Korrigjimi u ruajt. Versioni origjinal mbetet i disponueshëm.",
     ),
   };
 
   const staffActions = {
     startReview: () => mutate(
       () => grantService.startReview(),
-      "Shqyrtimi demonstrues filloi.",
+      "Shqyrtimi filloi.",
     ),
     requestCorrection: () => mutate(
       () => grantService.requestOfferCorrection(),
-      "Kërkesa për korrigjimin e ofertës u ruajt lokalisht.",
+      "Kërkesa për korrigjim u ruajt.",
     ),
     markCorrectionReviewed: () => mutate(
       () => grantService.markCorrectionReviewed(),
@@ -123,7 +136,7 @@ export default function App() {
     ),
     prepareArchivePackage: () => mutate(
       () => grantService.prepareArchivePackage(),
-      "Paketa demonstrative u përgatit lokalisht. Nuk u regjistrua në SMAED.",
+      "Paketa u përgatit. Nuk u regjistrua në SMAED.",
     ),
   };
 
@@ -144,7 +157,7 @@ export default function App() {
 
   const applicant = dataset.applicants[0];
   if (!applicant) {
-    return <main className="centered-page"><ErrorState message="Profili sintetik mungon nga të dhënat lokale." onRetry={resetDemo} /></main>;
+    return <main className="centered-page"><ErrorState message="Profili nuk u gjet." onRetry={resetDemo} /></main>;
   }
 
   const role = route[0] === "staff" ? "staff" : "applicant";
@@ -158,7 +171,7 @@ export default function App() {
       ) : (
         <ApplicantApp route={route} calls={dataset.calls} applications={dataset.applications} applicant={applicant} online={online} actions={applicantActions} onReset={resetDemo} />
       )}
-      <PwaStatus />
+      <PwaStatus online={online} />
     </>
   );
 }

@@ -31,7 +31,7 @@ Today, the public call and its application materials are published separately. T
 
 ### Live demo · 0:55–2:25
 
-Stage directions and exact clicks are in the runbook. Speak briefly while operating: “This is the historical call and its source. The applicant reuses synthetic Passport details. The checklist shows what remains missing. The bundled offer reading is simulated: here is a value beside its evidence, and here is a field left unresolved. The applicant confirms the corrected value, completes the required documents and creates a local demonstration receipt. The clerk requests one correction; the applicant sends a packaged version; staff compare the linked versions and prepare a local archive handoff. Nothing is filed in SMAED, and there is no official protocol reference.”
+Stage directions and exact clicks are in the runbook. Speak briefly while operating: “This call is closed; its source and requirements remain available. The applicant reuses synthetic profile details. Here is the missing offer. We capture the printed synthetic offer and crop it locally before adding it to the application. The reading result is a fixed simulation; it does not read the captured photo. The applicant checks the sample evidence, confirms a value and completes the requirements. This creates a local receipt. The clerk requests one correction; the applicant sends the prepared replacement; staff compare the linked versions and prepare an archive handoff. Nothing is filed in SMAED and there is no official protocol reference.”
 
 ### Slide 3 · 2:25–3:05
 
@@ -75,7 +75,7 @@ These are planning assumptions, not vendor quotations, municipal procurement fig
 | Have you measured savings? | No. A pilot would measure review time, missing evidence, correction cycles and task completion before making a savings claim. |
 | How quickly can staff learn it? | It is designed around familiar grant-review tasks; staff training time will be measured during the pilot. |
 | Can another municipality use it? | The workflow may be configurable, but that has not been tested with another municipality or its rules. |
-| What exactly works today? | A local synthetic demo covers discovery, Passport reuse, deterministic draft readiness, submission snapshot, correction and version history, archive preparation, and simulated evidence-linked document reading; it does not file officially. |
+| What exactly works today? | A local synthetic demo covers discovery, profile reuse, camera/photo capture and local cropping for an offer, deterministic draft readiness, a same-browser submission snapshot, correction/version history and archive preparation. Document reading returns fixed simulated fields and does not read the captured photo. It does not file officially. |
 
 ## Fallback order
 

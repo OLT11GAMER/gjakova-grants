@@ -1,11 +1,10 @@
 import { AlertTriangle, Inbox, LoaderCircle, RotateCcw } from "lucide-react";
 
-export function LoadingState({ label = "Po ngarkohet demonstrimi…" }: { label?: string }) {
+export function LoadingState({ label = "Duke ngarkuar…" }: { label?: string }) {
   return (
     <div className="feedback-state" role="status" aria-live="polite">
       <LoaderCircle className="spin" aria-hidden="true" />
       <strong>{label}</strong>
-      <span>Po lexohen të dhënat sintetike lokale.</span>
     </div>
   );
 }
@@ -39,7 +38,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
   return (
     <div className="feedback-state" role="alert">
       <AlertTriangle aria-hidden="true" />
-      <strong>Nuk mundëm ta hapim demonstrimin</strong>
+      <strong>Nuk mund të përfundohej veprimi.</strong>
       <span>{message}</span>
       <button className="button button--primary" type="button" onClick={onRetry}>
         <RotateCcw size={18} aria-hidden="true" />

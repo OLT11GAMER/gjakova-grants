@@ -103,6 +103,7 @@ export interface DocumentVersion {
   correctionRequestId?: string;
   demoOnly: true;
   templateId: string;
+  scanImageDataUrl?: string;
   documentAssist?: DocumentAssistRecord;
 }
 

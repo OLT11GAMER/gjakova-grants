@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   BriefcaseBusiness,
   CalendarDays,
+  Camera,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -13,24 +14,26 @@ import {
   FileText,
   Home,
   MessageSquareWarning,
-  ScanLine,
   RefreshCcw,
-  Save,
   Search,
   Send,
-  ShieldCheck,
   Trash2,
+  X,
 } from "lucide-react";
 import { Brand, RoleSwitcher } from "../components/RoleSwitcher";
 import {
   EvidencePanel,
   CaseTimeline,
+  DocumentPreview,
   GrantCard,
   RequirementRow,
   StatusLabel,
   applicationStatusPresentation,
+  displayReference,
+  formatDisplayDateTime,
 } from "../components/DomainComponents";
 import { EmptyState } from "../components/FeedbackStates";
+import { ScannerDialog } from "../components/ScannerDialog";
 import { demoDocumentTemplates } from "../data/fixtures";
 import {
   getReadiness,
@@ -49,7 +52,6 @@ import type {
   Requirement,
 } from "../types/domain";
 
-type CategoryFilter = "all" | GrantCall["category"];
 type ApplicationStep = "details" | "documents" | "review" | "receipt";
 
 export interface ApplicantActions {
@@ -57,6 +59,7 @@ export interface ApplicantActions {
   reusePassport: () => void;
   updatePassport: (patch: Partial<ApplicationApplicantDetails>) => void;
   selectDocument: (requirementId: string, templateId: string) => void;
+  addScannedOffer: (imageDataUrl: string) => boolean;
   removeDocument: (requirementId: string) => void;
   saveDocumentAssist: (versionId: string, record: DocumentAssistRecord) => boolean;
   confirmDocumentAssist: (versionId: string, values: Record<DocumentAssistFieldName, string>) => boolean;
@@ -84,9 +87,9 @@ const detailFields: Array<{
   { key: "displayName", label: "Emri i aplikuesit", type: "text", autoComplete: "name" },
   { key: "organization", label: "Veprimtaria", type: "text", autoComplete: "organization" },
   { key: "municipality", label: "Komuna", type: "text", autoComplete: "address-level2" },
-  { key: "email", label: "Email demonstrues", type: "email", autoComplete: "email" },
-  { key: "phone", label: "Telefoni demonstrues", type: "tel", autoComplete: "tel" },
-  { key: "businessNumber", label: "Numri demonstrues i biznesit", type: "text", autoComplete: "off" },
+  { key: "email", label: "Email", type: "email", autoComplete: "email" },
+  { key: "phone", label: "Telefoni", type: "tel", autoComplete: "tel" },
+  { key: "businessNumber", label: "Numri i biznesit", type: "text", autoComplete: "off" },
 ];
 
 function ApplicantHeader({ onReset }: { onReset: () => void }) {
@@ -102,7 +105,7 @@ function BottomNavigation({ current }: { current: string }) {
   const items = [
     { key: "opportunities", label: "Grantet", icon: Home, href: "#/applicant/opportunities" },
     { key: "applications", label: "Aplikimet", icon: FileCheck2, href: "#/applicant/applications" },
-    { key: "passport", label: "Pasaporta", icon: CircleUserRound, href: "#/applicant/passport" },
+    { key: "passport", label: "Profili", icon: CircleUserRound, href: "#/applicant/passport" },
   ];
   return (
     <nav className="bottom-nav" aria-label="Navigimi i aplikuesit">
@@ -121,27 +124,19 @@ function BottomNavigation({ current }: { current: string }) {
 
 function Opportunities({ calls }: { calls: GrantCall[] }) {
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<CategoryFilter>("all");
   const filteredCalls = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("sq");
-    return calls.filter((call) => {
-      const matchesCategory = category === "all" || call.category === category;
-      const matchesQuery = !normalizedQuery || `${call.title} ${call.institution}`.toLocaleLowerCase("sq").includes(normalizedQuery);
-      return matchesCategory && matchesQuery;
-    });
-  }, [calls, query, category]);
+    return calls.filter((call) => !normalizedQuery || `${call.title} ${call.institution}`.toLocaleLowerCase("sq").includes(normalizedQuery));
+  }, [calls, query]);
 
   const clearFilters = () => {
     setQuery("");
-    setCategory("all");
   };
 
   return (
     <>
       <section className="applicant-hero">
-        <p className="eyebrow">Mundësi trajnimi</p>
-        <h1>Përgatite aplikimin me kërkesa të qarta.</h1>
-        <p>Një thirrje reale historike, e përdorur vetëm për demonstrim. Afati origjinal mbetet i mbyllur.</p>
+        <h1>Grantet</h1>
       </section>
 
       <section className="filters-card" aria-label="Filtro mundësitë">
@@ -150,22 +145,10 @@ function Opportunities({ calls }: { calls: GrantCall[] }) {
           <span className="sr-only">Kërko mundësi</span>
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Kërko grantin ose institucionin…" />
         </label>
-        <div className="chip-row" role="group" aria-label="Filtro sipas kategorisë">
-          {([[
-            "all", "Të gjitha",
-          ], [
-            "business", "Biznes",
-          ]] as const).map(([value, label]) => (
-            <button key={value} type="button" className={category === value ? "chip is-active" : "chip"} aria-pressed={category === value} onClick={() => setCategory(value)}>
-              {label}
-            </button>
-          ))}
-        </div>
       </section>
 
       <div className="section-heading">
-        <div><p className="eyebrow">{filteredCalls.length} rezultat</p><h2>Thirrja e zgjedhur</h2></div>
-        <span className="source-key"><ShieldCheck size={16} aria-hidden="true" /> Burim primar</span>
+        <div><h2>Thirrjet</h2><small className="muted">{filteredCalls.length} rezultat</small></div>
       </div>
 
       {filteredCalls.length ? (
@@ -173,7 +156,7 @@ function Opportunities({ calls }: { calls: GrantCall[] }) {
           {filteredCalls.map((call) => <GrantCard key={call.id} call={call} />)}
         </div>
       ) : (
-        <EmptyState title="Nuk u gjet thirrja" message="Pastro filtrat për ta parë përsëri shembullin historik." actionLabel="Pastro filtrat" onAction={clearFilters} />
+        <EmptyState title="Nuk u gjet thirrja" message="Provo një kërkim tjetër." actionLabel="Pastro kërkimin" onAction={clearFilters} />
       )}
     </>
   );
@@ -185,25 +168,20 @@ function CallDetail({ call, application }: { call: GrantCall; application: Appli
     <>
       <a className="back-link" href="#/applicant/opportunities"><ArrowLeft size={18} aria-hidden="true" /> Kthehu te mundësitë</a>
       <section className="call-detail-hero">
-        <div className="call-detail-hero__labels">
-          <StatusLabel tone="neutral">{call.demoLabel}</StatusLabel>
-          <StatusLabel tone="success">Burim primar i kontrolluar</StatusLabel>
-        </div>
         <p className="eyebrow">{call.institution}</p>
         <h1>{call.title}</h1>
         <p>{call.summary}</p>
+        <StatusLabel tone="neutral">Afati ka përfunduar</StatusLabel>
         <div className="call-facts">
-          <div><CalendarDays size={20} aria-hidden="true" /><span><small>Afati origjinal</small><strong>11 mars – 03 prill 2026</strong></span></div>
+          <div><CalendarDays size={20} aria-hidden="true" /><span><small>Afati</small><strong>11 mars – 03 prill 2026</strong></span></div>
           <div><BriefcaseBusiness size={20} aria-hidden="true" /><span><small>Financimi për grant</small><strong>{call.amountLabel}</strong></span></div>
         </div>
-        <div className="honesty-note"><strong>Kjo thirrje është e mbyllur.</strong> Vetëm rruga e shënuar si trajnim lejon një dorëzim lokal demonstrues. Asgjë nuk dërgohet zyrtarisht.</div>
       </section>
 
       <section className="detail-layout">
-        <div className="surface-card">
+        <div className="call-requirements">
           <div className="section-heading section-heading--tight">
-            <div><p className="eyebrow">Lot I · versioni 1</p><h2>Dokumentet e kërkuara</h2></div>
-            <StatusLabel tone="neutral">5 kërkesa</StatusLabel>
+            <div><h2>Dokumentet e kërkuara</h2></div>
           </div>
           <div className="requirement-list">
             {call.requirements.map((requirement) => <RequirementRow key={requirement.id} requirement={requirement} onShowEvidence={setSelectedRequirement} />)}
@@ -214,8 +192,8 @@ function CallDetail({ call, application }: { call: GrantCall; application: Appli
 
       <section className="sticky-action-card">
         <div>
-          <strong>{application.status !== "draft" ? "Dorëzimi demonstrues është regjistruar" : "Nis ose vazhdo aplikimin trajnues"}</strong>
-          <span>Ruhet vetëm në këtë shfletues — jo aplikim zyrtar.</span>
+          <strong>{application.status !== "draft" ? "Aplikimi është përfunduar" : "Përgatit aplikimin"}</strong>
+          <span>Afati i thirrjes ka përfunduar.</span>
         </div>
         <a className="button button--primary" href={application.status !== "draft" ? "#/applicant/applications/receipt" : "#/applicant/applications/details"}>
           {application.status !== "draft" ? "Shiko statusin" : "Hap aplikimin"}<ChevronRight size={18} aria-hidden="true" />
@@ -242,13 +220,15 @@ function FormFields({
         const errorId = errors[field.key] ? `${field.key}-error` : undefined;
         return (
           <label className="form-field" key={field.key}>
-            <span>{field.label}</span>
+            <span>{field.label}<span className="required-mark" aria-hidden="true"> *</span></span>
             <input
               id={`field-${field.key}`}
               type={field.type}
               autoComplete={field.autoComplete}
               value={values[field.key]}
               disabled={disabled}
+              required
+              aria-required="true"
               aria-invalid={Boolean(errors[field.key])}
               aria-describedby={errorId}
               onChange={(event) => onChange({ [field.key]: event.target.value })}
@@ -283,20 +263,19 @@ function Passport({
   return (
     <>
       <section className="passport-hero">
-        <div className="passport-hero__icon"><CircleUserRound size={28} aria-hidden="true" /></div>
-        <div><p className="eyebrow">Pasaporta e aplikuesit</p><h1>Të dhëna që mund të ripërdoren.</h1><p>Profil sintetik, i redaktueshëm dhe i ruajtur vetëm në këtë shfletues.</p></div>
+        <div><h1>Profili</h1><p>Të dhënat e tua për aplikim.</p></div>
       </section>
-      <div className="honesty-note honesty-note--blue"><ShieldCheck size={19} aria-hidden="true" /><span><strong>Jo identitet i verifikuar.</strong> Mos shkruaj të dhëna personale reale në këtë demonstrim.</span></div>
-      {submitted ? <div className="inline-notice"><CheckCircle2 size={18} aria-hidden="true" /><span>Ndryshimet këtu nuk ndryshojnë snapshot-in e dorëzimit demonstrues.</span></div> : null}
-      <section className="surface-card">
-        <div className="section-heading section-heading--tight"><div><p className="eyebrow">Ruajtje automatike lokale</p><h2>Profili bazë</h2></div><StatusLabel tone={online ? "info" : "neutral"}>{online ? "Sintetik · i paverifikuar" : "Vetëm lexim"}</StatusLabel></div>
+      <p className="quiet-disclosure">Përdor vetëm të dhëna shembull. Identiteti nuk verifikohet.</p>
+      {submitted ? <div className="inline-notice"><CheckCircle2 size={18} aria-hidden="true" /><span>Ndryshimet në profil nuk ndryshojnë aplikimin e përfunduar.</span></div> : null}
+      <section className="profile-section">
+        <div className="section-heading section-heading--tight"><h2>Të dhënat bazë</h2><StatusLabel tone={online ? "success" : "neutral"}>{online ? "Ruajtur" : "Vetëm lexim"}</StatusLabel></div>
         <FormFields values={values} disabled={!online} onChange={onUpdate} />
       </section>
-      <section className="surface-card">
-        <div className="section-heading section-heading--tight"><div><p className="eyebrow">Dokumente demonstrimi</p><h2>Referenca të Pasaportës</h2></div><span className="count-pill">2</span></div>
+      <section className="profile-section">
+        <div className="section-heading section-heading--tight"><h2>Dokumente të disponueshme</h2><span className="muted">2 dokumente</span></div>
         <div className="document-list">
-          <div><FileText aria-hidden="true" /><span><strong>Dokument identifikimi · DEMO</strong><small>Mund të zgjidhet në aplikim</small></span><StatusLabel tone="success">I ripërdorshëm</StatusLabel></div>
-          <div><FileText aria-hidden="true" /><span><strong>Certifikatë trajnimi · DEMO</strong><small>Dokument opsional</small></span><StatusLabel tone="info">Opsionale</StatusLabel></div>
+          <div><FileText aria-hidden="true" /><span><strong>Dokument identifikimi</strong><small>Mund të zgjidhet në aplikim</small></span></div>
+          <div><FileText aria-hidden="true" /><span><strong>Certifikatë trajnimi</strong><small>Opsionale</small></span></div>
         </div>
       </section>
     </>
@@ -345,26 +324,23 @@ function DetailsStep({
   return (
     <section className="application-step surface-card">
       <div className="application-step__heading">
-        <div><p className="eyebrow">Hapi 1 nga 3</p><h2>Të dhënat e aplikuesit</h2><p>Plotësoji vetë ose kopjoji qartë nga Pasaporta sintetike.</p></div>
-        <button className="button button--secondary" type="button" disabled={!online} onClick={actions.reusePassport}><CircleUserRound size={18} aria-hidden="true" /> Ripërdor nga Pasaporta</button>
+        <div><p className="step-kicker">Hapi 1 nga 3</p><h2>Të dhënat e aplikuesit</h2></div>
+        <button className="button button--secondary" type="button" disabled={!online} onClick={actions.reusePassport}><CircleUserRound size={18} aria-hidden="true" /> Përdor të dhënat e profilit</button>
       </div>
-      <div className="local-save-note"><Save size={17} aria-hidden="true" /><span><strong>Ruajtje automatike.</strong> Drafti ruhet vetëm në këtë shfletues; nuk është ruajtje e sigurt ose ndërmjet pajisjeve.</span></div>
+      <p className="save-indicator"><Check size={16} aria-hidden="true" /> Ruajtur</p>
       <FormFields values={application.applicantDetails} errors={errors} disabled={!online} onChange={actions.updateDetails} />
-      <div className="step-actions"><span className="muted">Pasaporta burimore: {applicant.displayName} · sintetik</span><button className="button button--primary" type="button" disabled={!online} onClick={continueToDocuments}>Vazhdo te dokumentet <ChevronRight size={18} aria-hidden="true" /></button></div>
+      <div className="step-actions"><span className="muted">Profili: {applicant.displayName}</span><button className="button button--primary" type="button" disabled={!online} onClick={continueToDocuments}>Vazhdo te dokumentet <ChevronRight size={18} aria-hidden="true" /></button></div>
     </section>
   );
 }
+
+const displayFileName = (name: string) => name.replace(/_DEMO(?=\.pdf$)/i, "");
 
 function DemoDocumentPreview({ templateId }: { templateId: string }) {
   const template = demoDocumentTemplates.find((item) => item.id === templateId);
   if (!template) return null;
   return (
-    <div className="demo-document-preview" role="region" aria-label={`Parapamje e ${template.label}`}>
-      <span className="synthetic-document__badge">DEMO · PA TË DHËNA REALE</span>
-      <FileText size={38} aria-hidden="true" />
-      <strong>{template.fileName}</strong>
-      {template.previewLines.map((line) => <span key={line}>{line}</span>)}
-    </div>
+    <DocumentPreview title={template.label} fileName={displayFileName(template.fileName)} lines={template.previewLines} scan={template.id === "template-offer-basic"} />
   );
 }
 
@@ -376,18 +352,19 @@ const assistFields: Array<{ key: DocumentAssistFieldName; label: string }> = [
   { key: "description", label: "Përshkrimi" },
 ];
 
-async function scanAsPng() {
+async function scanAsPng(source?: string) {
   const image = new Image();
-  image.src = "/demo/offer-scan.svg";
+  image.src = source ?? "/demo/offer-scan.svg";
   await image.decode();
+  const factor = Math.min(1, 900 / image.naturalWidth, 1273 / image.naturalHeight);
   const canvas = document.createElement("canvas");
-  canvas.width = 900;
-  canvas.height = 1120;
+  canvas.width = Math.max(500, Math.round(image.naturalWidth * factor));
+  canvas.height = Math.max(500, Math.round(image.naturalHeight * factor));
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Pamja sintetike nuk mund të përgatitet.");
+  if (!context) throw new Error("Pamja e dokumentit nuk mund të përgatitet.");
   context.drawImage(image, 0, 0, 900, 1120);
   const imageDataUrl = canvas.toDataURL("image/png");
-  if (imageDataUrl.length > 1_800_000) throw new Error("Imazhi është shumë i madh për këtë demonstrim.");
+  if (imageDataUrl.length > 1_800_000) throw new Error("Imazhi është shumë i madh për lexim.");
   return imageDataUrl;
 }
 
@@ -407,11 +384,11 @@ function OfferDocumentAssist({ document, online, actions }: { document: Document
     setBusy(true);
     setMessage("");
     try {
-      const imageDataUrl = await scanAsPng();
+      const imageDataUrl = await scanAsPng(document.scanImageDataUrl);
       const response = await fetch("/api/document-assist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scanAssetId: "offer-scan-v1", imageDataUrl }), cache: "no-store" });
       const payload = await response.json() as { result?: DocumentAssistResult; provenance?: DocumentAssistRecord["provenance"]; model?: string | null; error?: string };
       if (!response.ok || !payload.result || !payload.provenance) {
-        const errors: Record<string, string> = { unconfigured: "Leximi automatik nuk është konfiguruar në këtë demonstrim lokal. Dokumenti mund të vazhdojë normalisht.", unsupported: "Pranohet vetëm imazhi sintetik PNG brenda kufirit të madhësisë.", timeout: "Leximi zgjati shumë. Provo sërish me butonin më poshtë.", malformed: "Përgjigjja nuk ishte e strukturuar. Kontrolloje dokumentin vetë ose provo sërish.", upstream: "Shërbimi i leximit nuk është i disponueshëm. Dokumenti mbetet i përdorshëm.", network: "Lidhja dështoi. Provo sërish kur të jetë e disponueshme." };
+        const errors: Record<string, string> = { unconfigured: "Leximi i dokumentit nuk është i disponueshëm. Mund të vazhdosh pa të.", unsupported: "Ky imazh nuk mund të lexohet.", timeout: "Leximi zgjati shumë. Provo sërish.", malformed: "Të dhënat nuk u lexuan qartë. Kontrollo dokumentin ose provo sërish.", upstream: "Leximi i dokumentit nuk është i disponueshëm. Mund të vazhdosh pa të.", network: "Lidhja dështoi. Provo sërish." };
         throw new Error(errors[payload.error ?? ""] ?? "Leximi nuk u përfundua. Dokumenti mbetet i përdorshëm.");
       }
       const saved = actions.saveDocumentAssist(document.id, { scanAssetId: "offer-scan-v1", extraction: payload.result, confirmations: {}, provenance: payload.provenance, model: payload.model ?? null, createdAt: new Date().toISOString() });
@@ -425,20 +402,20 @@ function OfferDocumentAssist({ document, online, actions }: { document: Document
   };
   const found = record ? assistFields.filter(({ key }) => record.extraction.fields[key].value !== null).length : 0;
   const confirmed = record ? assistFields.filter(({ key }) => Boolean(record.confirmations[key]?.value)).length : 0;
-  return <section className="offer-assist" aria-label="Leximi i ofertës sintetike">
-    <div className="offer-assist__heading"><div><p className="eyebrow">Dokumenti sintetik · v{document.version}</p><h3>Leximi i dokumentit</h3></div><ScanLine size={22} aria-hidden="true" /></div>
+  return <section className="offer-assist" aria-label="Leximi i ofertës">
+    <div className="offer-assist__heading"><h3>Të dhënat e dokumentit</h3><FileText size={21} aria-hidden="true" /></div>
     <div className="offer-assist__grid">
-      <figure className="offer-assist__scan"><img src="/demo/offer-scan.svg" alt="Ofertë sintetike e skanuar: Punishtja Shembull, datë 18.03.2026, total 2,850.00 EUR" /><figcaption>Fletë sintetike e paketuar · pa dokumente reale</figcaption></figure>
+      <figure className="offer-assist__scan"><img src={document.scanImageDataUrl ?? "/demo/offer-scan.svg"} alt="Parapamje e ofertës / profaturës së përzgjedhur" /><figcaption>Oferta / Profatura · v{document.version}</figcaption></figure>
       <div className="offer-assist__side">
-        {!record ? <><p>Lexo pesë të dhëna nga kjo fletë. Rezultati kërkon konfirmimin tënd; kontrolli i dokumenteve mbetet sipas rregullave të thirrjes.</p><button className="button button--primary" type="button" disabled={!online || busy} onClick={read}><ScanLine size={17} aria-hidden="true" /> {busy ? "Po lexohet…" : "Lexo dokumentin"}</button>{!online ? <p className="offer-assist__notice">Offline · leximi i ri nuk mund të nisë.</p> : null}</> : <>
-          <p className="offer-assist__notice">{record.provenance === "live" ? "Lexim AI i drejtpërdrejtë" : record.provenance === "captured" ? "Rezultat AI i ruajtur" : "Rezultat i simuluar lokal · pa thirrje AI"} · {record.extraction.overallStatus === "readable" ? "I lexueshëm" : "Kërkon rishikim"}</p>
-          <p className="offer-assist__hint">Vlera në fushë është për konfirmim. “Nxjerrë nga leximi” ruan veçmas tekstin fillestar.</p>
+        {!record ? <><p>Lexo të dhënat e ofertës dhe kontrolloji para konfirmimit.</p><button className="button button--primary" type="button" disabled={!online || busy} onClick={read}><FileText size={17} aria-hidden="true" /> {busy ? "Po lexohet…" : "Lexo dokumentin"}</button>{!online ? <p className="offer-assist__notice">Leximi nuk është i disponueshëm pa lidhje.</p> : null}</> : <>
+          <p className="offer-assist__provenance">{record.provenance === "live" ? "Lexim automatik" : record.provenance === "captured" ? "Rezultat i ruajtur" : "Rezultat demonstrues · pa lexim AI"}</p>
+          <p className="offer-assist__hint">Kontrollo vlerat me dokumentin. {record.extraction.overallStatus === "readable" ? "" : "Disa fusha kërkojnë vëmendje."}</p>
           <div className="offer-assist__fields">{assistFields.map(({ key, label }) => { const field = record.extraction.fields[key]; const status = field.value === null ? "Nuk u gjet" : field.confidence === "high" ? "U gjet" : "Rishiko"; return <label className="offer-assist__field" key={key}><span><strong>{label}</strong><small className={field.value && field.confidence === "high" ? "is-found" : "is-review"}>{field.value && field.confidence === "high" ? <Check size={13} aria-hidden="true" /> : <AlertCircle size={13} aria-hidden="true" />}{status}</small></span><input value={values[key]} maxLength={120} disabled={!online} onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))} aria-label={`${label} · konfirmim nga aplikuesi`} placeholder="Lëre bosh nëse mbetet e paqartë" /><em>Nxjerrë nga leximi: {field.value ?? "Pa vlerë"}</em><small>Burimi: {field.evidence ? `“${field.evidence}”` : "Nuk u gjet fragment mbështetës"}</small>{record.confirmations[key] ? <small>Konfirmuar nga aplikuesi: {record.confirmations[key]?.value ?? "E pazgjidhur"}</small> : null}</label>; })}</div>
           {record.extraction.notes.length ? <p className="offer-assist__notice">{record.extraction.notes.join(" ")}</p> : null}
           <button className="button button--secondary" type="button" disabled={!online} onClick={() => actions.confirmDocumentAssist(document.id, values)}>Konfirmo të dhënat</button>
-          {Object.keys(record.confirmations).length ? <p className="offer-assist__summary">Dokumenti u lexua · {found} fusha u gjetën · {confirmed} u konfirmuan · {5 - confirmed} kërkojnë rishikim</p> : null}
+          {Object.keys(record.confirmations).length ? <p className="offer-assist__summary">{found} fusha u gjetën · {confirmed} u konfirmuan · {5 - confirmed} kërkojnë rishikim</p> : null}
         </>}
-        {busy ? <p role="status" className="offer-assist__notice">Po përpunohet vetëm kjo fletë sintetike…</p> : null}
+        {busy ? <p role="status" className="offer-assist__notice">Duke lexuar dokumentin…</p> : null}
         {message ? <p role="alert" className="offer-assist__error">{message}</p> : null}
       </div>
     </div>
@@ -447,12 +424,14 @@ function OfferDocumentAssist({ document, online, actions }: { document: Document
 
 function DocumentsStep({ application, call, online, actions }: { application: Application; call: GrantCall; online: boolean; actions: ApplicantActions }) {
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const scannerTriggerRef = useRef<HTMLButtonElement>(null);
   const readiness = getReadiness(application, call);
   return (
     <section className="application-step">
       <div className="application-step__heading">
-        <div><p className="eyebrow">Hapi 2 nga 3</p><h2>Dokumentet demonstrues</h2><p>Zgjidh vetëm skedarë sintetikë të përgatitur. Ngarkimi i skedarëve realë nuk ofrohet.</p></div>
-        <StatusLabel tone={readiness.ready ? "success" : "warning"}>{readiness.completeCount}/{readiness.mandatoryCount} të detyrueshme</StatusLabel>
+        <div><p className="step-kicker">Hapi 2 nga 3</p><h2>Dokumentet</h2></div>
+        <StatusLabel tone={readiness.ready ? "success" : "warning"}>{readiness.completeCount}/{readiness.mandatoryCount} të plota</StatusLabel>
       </div>
       <div className="document-picker-list">
         {call.requirements.map((requirement) => {
@@ -464,29 +443,30 @@ function DocumentsStep({ application, call, online, actions }: { application: Ap
           return (
             <article className="document-picker" key={requirement.id}>
               <div className="document-picker__heading">
-                <span className={`requirement-row__icon ${check?.status === "present" ? "is-complete" : ""}`} aria-hidden="true">{check?.status === "present" ? <Check size={17} /> : <FileText size={17} />}</span>
-                <div><strong>{requirement.title}</strong><span>{requirement.kind === "optional" ? "Opsionale — nuk bllokon dorëzimin" : "E detyrueshme"}</span></div>
-                <StatusLabel tone={check?.status === "present" ? "success" : requirement.kind === "optional" ? "info" : "danger"}>{check?.status === "present" ? "Gati" : requirement.kind === "optional" ? "Opsionale" : "Mungon"}</StatusLabel>
+                <span className={`requirement-row__icon ${check?.status === "present" ? "is-complete" : ""}`} aria-hidden="true">{check?.status === "present" ? <Check size={17} /> : requirement.kind === "optional" ? <FileText size={17} /> : <X size={17} />}</span>
+                <div><strong>{requirement.title}{requirement.kind === "mandatory" ? <span className="required-mark" aria-label="e detyrueshme"> *</span> : null}</strong>{requirement.kind === "optional" ? <span>Opsionale</span> : null}</div>
+                <StatusLabel tone={check?.status === "present" ? "success" : requirement.kind === "optional" ? "neutral" : "danger"}>{check?.status === "present" ? "Gati" : requirement.kind === "optional" ? "Pa zgjedhur" : "Mungon"}</StatusLabel>
               </div>
               {isForm ? (
-                <p className="document-picker__form-note">Formulari krijohet nga të dhënat e hapit 1 dhe futet në snapshot gjatë dorëzimit demonstrues.</p>
+                <p className="document-picker__form-note">Formulari përgatitet nga të dhënat e hapit të parë.</p>
               ) : (
                 <>
                   <label className="form-field">
-                    <span>Zgjidh dokumentin e paketuar</span>
+                    <span>Zgjidh dokumentin e përgatitur</span>
                     <select value={active?.templateId ?? ""} disabled={!online} onChange={(event) => event.target.value ? actions.selectDocument(requirement.id, event.target.value) : actions.removeDocument(requirement.id)}>
                       <option value="">Asnjë dokument</option>
                       {templates.map((template) => <option key={template.id} value={template.id}>{template.label}</option>)}
                     </select>
                   </label>
+                  {requirement.id === "req-offer" ? <div className="scanner-entry"><button ref={scannerTriggerRef} type="button" className="button button--secondary" disabled={!online || application.status !== "draft"} onClick={() => setScannerOpen(true)}><Camera size={17} aria-hidden="true" /> Skanoni dokumentin</button><small>Kamerë ose fotografi nga pajisja</small></div> : null}
                   {active ? (
                     <div className="document-picker__selected">
-                      <span><strong>{active.fileName}</strong><small>Versioni {active.version} · {active.sizeLabel}</small></span>
+                      <span><strong>{displayFileName(active.fileName)}</strong><small>Versioni {active.version} · {active.sizeLabel}</small></span>
                       <button className="button button--secondary button--compact" type="button" onClick={() => setPreviewTemplateId(previewTemplateId === active.templateId ? null : active.templateId)}><Eye size={17} aria-hidden="true" /> {previewTemplateId === active.templateId ? "Mbyll" : "Shiko"}</button>
                       <button className="icon-button icon-button--danger" type="button" disabled={!online} onClick={() => actions.removeDocument(requirement.id)} aria-label={`Hiq ${active.fileName}`}><Trash2 size={17} aria-hidden="true" /></button>
                     </div>
                   ) : null}
-                  {previewTemplateId === active?.templateId ? <DemoDocumentPreview templateId={active.templateId} /> : null}
+                  {previewTemplateId === active?.templateId ? active.scanImageDataUrl ? <DocumentPreview title={requirement.title} fileName={active.fileName} version={active.version} lines={[]} imageSrc={active.scanImageDataUrl} /> : <DemoDocumentPreview templateId={active.templateId} /> : null}
                   {requirement.id === "req-offer" && active?.templateId === "template-offer-basic" ? <OfferDocumentAssist document={active} online={online} actions={actions} /> : null}
                 </>
               )}
@@ -495,6 +475,7 @@ function DocumentsStep({ application, call, online, actions }: { application: Ap
         })}
       </div>
       <div className="step-actions"><a className="button button--secondary" href="#/applicant/applications/details"><ArrowLeft size={18} aria-hidden="true" /> Të dhënat</a><a className="button button--primary" href="#/applicant/applications/review">Rishiko aplikimin <ChevronRight size={18} aria-hidden="true" /></a></div>
+      {scannerOpen ? <ScannerDialog returnFocusRef={scannerTriggerRef} onClose={() => setScannerOpen(false)} onUse={actions.addScannedOffer} /> : null}
     </section>
   );
 }
@@ -509,23 +490,23 @@ function ReviewStep({ application, call, online, actions }: { application: Appli
   };
   return (
     <section className="application-step">
-      <div className="application-step__heading"><div><p className="eyebrow">Hapi 3 nga 3</p><h2>Rishiko dhe dorëzo demonstrimin</h2><p>Kontrolli është determinist: vetëm fusha të plota dhe prania e dokumenteve të detyrueshme.</p></div><StatusLabel tone={readiness.ready ? "success" : "warning"}>{readiness.completeCount}/{readiness.mandatoryCount} të detyrueshme</StatusLabel></div>
+      <div className="application-step__heading"><div><p className="step-kicker">Hapi 3 nga 3</p><h2>Rishiko aplikimin</h2></div><StatusLabel tone={readiness.ready ? "success" : "warning"}>{readiness.completeCount}/{readiness.mandatoryCount} të plota</StatusLabel></div>
       {!readiness.ready ? (
         <div className="validation-summary" role={submitAttempted ? "alert" : "status"} tabIndex={-1}>
           <AlertCircle size={20} aria-hidden="true" />
           <div><strong>Plotëso kërkesat e detyrueshme.</strong><ul>{readiness.missing.map((requirement) => <li key={requirement.id}>{requirement.title}</li>)}</ul></div>
         </div>
-      ) : <div className="success-summary"><CheckCircle2 size={20} aria-hidden="true" /><span><strong>Gati për dorëzim demonstrues.</strong> Dokumenti opsional nuk ndikon në këtë rezultat.</span></div>}
+      ) : <div className="success-summary"><Check size={20} aria-hidden="true" /><span><strong>Gati për përfundim.</strong></span></div>}
       <section className="review-grid">
-        <div className="surface-card"><p className="eyebrow">Të dhënat e draftit</p><h3>{application.applicantDetails.displayName || "Pa emër"}</h3><p>{application.applicantDetails.organization || "Pa veprimtari"}<br />{application.applicantDetails.email || "Pa email"}<br />{application.applicantDetails.businessNumber || "Pa numër biznesi"}</p><a className="inline-link" href="#/applicant/applications/details">Ndrysho të dhënat</a></div>
-        <div className="surface-card"><p className="eyebrow">Lista e kontrollit</p><div className="compact-check-list">{call.requirements.map((requirement) => { const check = readiness.checks.find((item) => item.requirementId === requirement.id); return <span key={requirement.id}><span className={check?.status === "present" ? "is-ready" : requirement.kind === "optional" ? "is-optional" : "is-missing"}>{check?.status === "present" ? <Check size={15} /> : <AlertCircle size={15} />}</span><strong>{requirement.title}</strong><small>{requirement.kind === "optional" ? "Opsionale" : check?.status === "present" ? "Gati" : "Mungon"}</small></span>; })}</div><a className="inline-link" href="#/applicant/applications/documents">Ndrysho dokumentet</a></div>
+        <div className="review-section"><h3>Të dhënat</h3><strong>{application.applicantDetails.displayName || "Pa emër"}</strong><p>{application.applicantDetails.organization || "Pa veprimtari"}<br />{application.applicantDetails.email || "Pa email"}<br />{application.applicantDetails.businessNumber || "Pa numër biznesi"}</p><a className="inline-link" href="#/applicant/applications/details">Ndrysho të dhënat</a></div>
+        <div className="review-section"><h3>Dokumentet</h3><div className="compact-check-list">{call.requirements.map((requirement) => { const check = readiness.checks.find((item) => item.requirementId === requirement.id); return <span key={requirement.id}><span className={check?.status === "present" ? "is-ready" : requirement.kind === "optional" ? "is-optional" : "is-missing"}>{check?.status === "present" ? <Check size={15} /> : <X size={15} />}</span><strong>{requirement.title}</strong><small>{requirement.kind === "optional" ? "Opsionale" : check?.status === "present" ? "Gati" : "Mungon"}</small></span>; })}</div><a className="inline-link" href="#/applicant/applications/documents">Ndrysho dokumentet</a></div>
       </section>
       <label className={`demo-consent ${submitAttempted && !application.demoSubmissionAcknowledged ? "has-error" : ""}`}>
         <input type="checkbox" checked={application.demoSubmissionAcknowledged} disabled={!online || application.status !== "draft"} onChange={(event) => actions.setAcknowledged(event.target.checked)} />
-        <span><strong>E kuptoj që ky është dorëzim demonstrues.</strong> Thirrja reale është e mbyllur; nuk krijohet aplikim ose faturë zyrtare dhe asgjë nuk i dërgohet komunës.</span>
+        <span>E kuptoj që kjo është një rrjedhë demonstrimi për thirrje të mbyllur. Aplikimi nuk i dërgohet komunës dhe nuk krijohet numër protokolli.</span>
       </label>
-      {submitAttempted && !application.demoSubmissionAcknowledged ? <p className="field-error">Konfirmo deklaratën e demonstrimit para vazhdimit.</p> : null}
-      <div className="step-actions"><a className="button button--secondary" href="#/applicant/applications/documents"><ArrowLeft size={18} aria-hidden="true" /> Dokumentet</a><button className="button button--primary" type="button" disabled={!online || application.status !== "draft"} onClick={submit}><Send size={18} aria-hidden="true" /> Dorëzo demonstrimin</button></div>
+      {submitAttempted && !application.demoSubmissionAcknowledged ? <p className="field-error">Konfirmo deklaratën para vazhdimit.</p> : null}
+      <div className="step-actions"><a className="button button--secondary" href="#/applicant/applications/documents"><ArrowLeft size={18} aria-hidden="true" /> Dokumentet</a><button className="button button--primary" type="button" disabled={!online || application.status !== "draft"} onClick={submit}><Send size={18} aria-hidden="true" /> Përfundo</button></div>
     </section>
   );
 }
@@ -546,12 +527,11 @@ function CorrectionDocument({
     <article className="correction-document">
       <div className="correction-document__heading">
         <span><FileText size={18} aria-hidden="true" /> {label}</span>
-        <StatusLabel tone={document.correctionRequestId ? "info" : "neutral"}>Versioni {document.version}</StatusLabel>
+        <span className="muted">v{document.version}</span>
       </div>
-      <strong>{document.fileName}</strong>
-      <small>{document.sizeLabel} · {new Intl.DateTimeFormat("sq-AL", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(document.createdAt))}</small>
-      {template ? <ul>{template.previewLines.map((line) => <li key={line}>{line}</li>)}</ul> : null}
-      <span className="synthetic-inline">DEMO · pa dokument real</span>
+      <strong>{displayFileName(document.fileName)}</strong>
+      <small>{document.sizeLabel} · {formatDisplayDateTime(document.createdAt)}</small>
+      {template ? <details className="document-preview-details"><summary><Eye size={16} aria-hidden="true" /> Shiko dokumentin</summary><DocumentPreview title={label} fileName={displayFileName(document.fileName)} version={document.version} lines={template.previewLines} scan={template.id === "template-offer-basic"} imageSrc={document.scanImageDataUrl} /></details> : null}
     </article>
   );
 }
@@ -568,7 +548,7 @@ function Receipt({
   actions: ApplicantActions;
 }) {
   const snapshot = application.submittedSnapshot;
-  if (!snapshot) return <EmptyState title="Nuk ka ende faturë demonstrimi" message="Përfundo tre hapat dhe kryej dorëzimin demonstrues." actionLabel="Kthehu te aplikimi" onAction={() => { window.location.hash = "/applicant/applications/details"; }} />;
+  if (!snapshot) return <EmptyState title="Aplikimi nuk është përfunduar" message="Përfundo tre hapat për të parë statusin." actionLabel="Kthehu te aplikimi" onAction={() => { window.location.hash = "/applicant/applications/details"; }} />;
   const status = applicationStatusPresentation[application.status];
   const correction = application.correctionRequests[0];
   const applicantEvents = application.events.filter((event) => event.visibleToApplicant);
@@ -584,54 +564,51 @@ function Receipt({
       <section className={`applicant-status-card ${actionRequired ? "needs-action" : ""}`}>
         <div className="applicant-status-card__icon">{actionRequired ? <MessageSquareWarning size={26} aria-hidden="true" /> : <CheckCircle2 size={26} aria-hidden="true" />}</div>
         <div>
-          <p className="eyebrow">Statusi i aplikimit · {application.reference}</p>
-          <h1>{actionRequired ? "Kërkohet një korrigjim." : status.label}</h1>
-          <p>{actionRequired ? "Ofertës sintetike i duhet një version më i qartë. Origjinali mbetet i ruajtur." : application.status === "under-review-demo" ? "Rasti po shqyrtohet në këtë demonstrim lokal." : correctionSent ? "Korrigjimi është ruajtur pa ndryshuar dorëzimin origjinal." : "Snapshot-i demonstrues është ruajtur dhe pret shqyrtim."}</p>
+          <p className="case-reference">{displayReference(application.reference)}</p>
+          <h1>{actionRequired ? "Kërkohet korrigjim" : status.label}</h1>
+          <p>{actionRequired ? "Oferta ka nevojë për një version më të qartë. Origjinali mbetet i disponueshëm." : application.status === "under-review-demo" ? "Aplikimi është në shqyrtim." : correctionSent ? "Korrigjimi është ruajtur pa ndryshuar versionin origjinal." : "Aplikimi është përfunduar dhe pret shqyrtim."}</p>
         </div>
-        <StatusLabel tone={status.tone}>{status.label}</StatusLabel>
       </section>
 
       {!online ? <div className="honesty-note"><strong>Vetëm lexim offline.</strong> Kërkesa dhe historia mund të lexohen, por përgjigjja kërkon lidhje.</div> : null}
 
-      {assist ? <section className="surface-card receipt-assist"><p className="eyebrow">Oferta origjinale · lexim i ruajtur</p><h2>Të dhënat e dokumentit</h2><p>{assist.provenance === "live" ? "Lexim AI i drejtpërdrejtë" : assist.provenance === "captured" ? "Rezultat AI i ruajtur" : "Rezultat i simuluar lokal · pa thirrje AI"}. Këto vlera janë informative; gatishmëria llogaritet nga dokumentet e kërkuara.</p><dl>{assistFields.map(({ key, label }) => <div key={key}><dt>{label}</dt><dd>{assist.confirmations[key]?.value ?? "E pazgjidhur"}</dd></div>)}</dl></section> : null}
+      {assist ? <section className="receipt-assist"><h2>Të dhënat e dokumentit</h2><p className="quiet-disclosure">{assist.provenance === "live" ? "Lexim automatik" : assist.provenance === "captured" ? "Rezultat i ruajtur" : "Rezultat demonstrues · pa lexim AI"}</p><dl>{assistFields.map(({ key, label }) => <div key={key}><dt>{label}</dt><dd>{assist.confirmations[key]?.value ?? "E pazgjidhur"}</dd></div>)}</dl></section> : null}
 
       {correction ? (
         <section className="surface-card applicant-correction" aria-labelledby="correction-heading">
           <div className="section-heading section-heading--tight">
-            <div><p className="eyebrow">Korrigjimi {correction.id}</p><h2 id="correction-heading">Oferta / Profaturë</h2></div>
+            <div><h2 id="correction-heading">Oferta / Profaturë</h2></div>
             <StatusLabel tone={actionRequired ? "danger" : correction.status === "reviewed" ? "success" : "warning"}>{actionRequired ? "Veprim i nevojshëm" : correction.status === "reviewed" ? "U shqyrtua" : "U dërgua"}</StatusLabel>
           </div>
-          <div className="public-message"><MessageSquareWarning size={20} aria-hidden="true" /><span><strong>Mesazhi i komunës në demonstrim</strong>{correction.applicantMessage}</span></div>
+          <div className="public-message"><MessageSquareWarning size={20} aria-hidden="true" /><span><strong>Kërkesa për korrigjim</strong>{correction.applicantMessage.replace("versionin demonstrues", "një version")}</span></div>
           <div className={correctionSent ? "correction-version-grid" : "correction-version-grid correction-version-grid--single"}>
-            <CorrectionDocument application={application} documentId={correction.questionedDocumentVersionId} label="Origjinali në dorëzim" />
-            {correctionSent ? <CorrectionDocument application={application} documentId={correction.responseDocumentVersionId} label="Korrigjimi i dërguar" /> : null}
+            <CorrectionDocument application={application} documentId={correction.questionedDocumentVersionId} label="Versioni origjinal" />
+            {correctionSent ? <CorrectionDocument application={application} documentId={correction.responseDocumentVersionId} label="Versioni i ri" /> : null}
           </div>
           {actionRequired ? (
             <div className="correction-action">
-              <div><strong>Dokumenti i gatshëm për demonstrim</strong><span>Oferta_pajisje_v2_DEMO.pdf · e paketuar, pa të dhëna reale</span></div>
-              <button className="button button--primary" type="button" disabled={!online} onClick={submitCorrection}><RefreshCcw size={18} aria-hidden="true" /> Dërgo ofertën e korrigjuar · DEMO</button>
+              <div><strong>Versioni i ri i ofertës</strong><span>Oferta_pajisje_v2.pdf</span></div>
+              <button className="button button--primary" type="button" disabled={!online} onClick={submitCorrection}><RefreshCcw size={18} aria-hidden="true" /> Dërgo korrigjimin</button>
             </div>
           ) : null}
         </section>
       ) : null}
 
       <section className="surface-card applicant-history">
-        <div className="section-heading section-heading--tight"><div><p className="eyebrow">Histori e aplikimit</p><h2>Çfarë ka ndodhur</h2></div><StatusLabel tone="neutral">Lokale · jo audit ligjor</StatusLabel></div>
+        <div className="section-heading section-heading--tight"><h2>Historia</h2></div>
         <CaseTimeline events={applicantEvents} />
       </section>
 
       <section className="receipt-card receipt-card--compact">
-        <p className="eyebrow">Snapshot-i origjinal · i pandryshuar</p>
-        <h2>Fatura lokale e demonstrimit</h2>
-        <p>Kjo dëshmon vetëm rrjedhën e prototipit. Nuk është konfirmim nga Komuna e Gjakovës.</p>
+        <h2>Përmbledhja e aplikimit</h2>
         <dl className="receipt-facts">
-          <div><dt>Referenca stabile</dt><dd>{application.reference}</dd></div>
+          <div><dt>Referenca</dt><dd>{displayReference(application.reference)}</dd></div>
           <div><dt>Thirrja</dt><dd>{call.shortTitle}</dd></div>
-          <div><dt>Aplikuesi në snapshot</dt><dd>{snapshot.applicant.displayName} · {snapshot.applicant.organization}</dd></div>
-          <div><dt>Dokumente origjinale</dt><dd>{snapshot.documentVersionIds.length}</dd></div>
+          <div><dt>Aplikuesi</dt><dd>{snapshot.applicant.displayName} · {snapshot.applicant.organization}</dd></div>
+          <div><dt>Dokumente</dt><dd>{snapshot.documentVersionIds.length}</dd></div>
         </dl>
-        <div className="honesty-note"><strong>Ruajtje lokale.</strong> Snapshot-i dhe korrigjimi jetojnë vetëm në këtë shfletues; nuk janë sinkronizim ndërmjet pajisjeve ose dorëzim zyrtar.</div>
-        <div className="receipt-actions"><a className="button button--secondary" href="#/applicant/passport">Ndrysho Pasaportën</a><a className="button button--primary" href={`#/staff/applications/${application.id}`}>Shiko si staf <ChevronRight size={18} aria-hidden="true" /></a></div>
+        <p className="quiet-disclosure">Kjo përmbledhje ruhet në këtë shfletues dhe nuk është konfirmim nga komuna.</p>
+        <div className="receipt-actions"><a className="inline-link" href="#/applicant/passport">Ndrysho profilin</a></div>
       </section>
     </div>
   );
@@ -646,8 +623,8 @@ function ApplicationFlow({ application, call, applicant, requestedStep, online, 
   return (
     <>
       <section className="application-preview-heading">
-        <div><p className="eyebrow">Aplikim trajnues · {application.reference}</p><h1>{call.shortTitle}</h1><p>Thirrja historike mbetet e mbyllur. Ky është vetëm demonstrim lokal.</p></div>
-        <StatusLabel tone={application.status === "draft" ? "info" : applicationStatusPresentation[application.status].tone}>{application.status === "draft" ? "Draft lokal" : applicationStatusPresentation[application.status].label}</StatusLabel>
+        <div><h1>Aplikimi im</h1><p>{call.shortTitle} · {displayReference(application.reference)}</p></div>
+        <StatusLabel tone={application.status === "draft" ? "neutral" : applicationStatusPresentation[application.status].tone}>{applicationStatusPresentation[application.status].label}</StatusLabel>
       </section>
       {!online ? <div className="honesty-note"><strong>Vetëm lexim offline.</strong> Rilidhu për të ndryshuar ose dorëzuar draftin.</div> : null}
       {application.status === "draft" ? <ApplicationStepper step={step} submitted={false} /> : null}

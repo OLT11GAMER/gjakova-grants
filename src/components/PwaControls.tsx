@@ -89,24 +89,12 @@ export function PwaInstallAction() {
   );
 }
 
-export function PwaStatus() {
-  const [online, setOnline] = useState(window.navigator.onLine);
+export function PwaStatus({ online }: { online: boolean }) {
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW();
-
-  useEffect(() => {
-    const markOnline = () => setOnline(true);
-    const markOffline = () => setOnline(false);
-    window.addEventListener("online", markOnline);
-    window.addEventListener("offline", markOffline);
-    return () => {
-      window.removeEventListener("online", markOnline);
-      window.removeEventListener("offline", markOffline);
-    };
-  }, []);
 
   const closePrompt = () => {
     setOfflineReady(false);
@@ -125,7 +113,7 @@ export function PwaStatus() {
         <section className="update-prompt" role="status" aria-live="polite">
           <div>
             <strong>{needRefresh ? "Ka një version të ri" : "Ndërfaqja është gati për shikim offline"}</strong>
-            <span>{needRefresh ? "Përditësojeni vetëm kur të jeni gati; faqja nuk ringarkohet automatikisht." : "Offline ruhen vetëm skedat publike dhe skeleti i demonstrimit."}</span>
+            <span>{needRefresh ? "Përditësojeni vetëm kur të jeni gati; faqja nuk ringarkohet automatikisht." : "Faqet publike mbeten të lexueshme edhe pa lidhje."}</span>
           </div>
           {needRefresh ? <button className="button button--primary" type="button" onClick={() => void updateServiceWorker(true)}>Përditëso tani</button> : null}
           <button className="button button--secondary" type="button" onClick={closePrompt}>{needRefresh ? "Më vonë" : "Mbyll"}</button>

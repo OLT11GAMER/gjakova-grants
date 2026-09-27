@@ -1,8 +1,18 @@
 # Gjakova Grants project state
 
+## Tutorial navigation link — 27 September 2026
+
+Added a centered `Video demo` link to the applicant and staff top bars. It opens the user-provided YouTube tutorial in a new tab. The source change was pushed as `72c220e` to the personal `OLT11GAMER/gjakova-grants` repository only; the official Team Pooks remote was not pushed. The local production preview confirmed no horizontal overflow at applicant widths 390px and 320px or staff widths 390px and 1440px, and no browser page errors. After the push, fresh public Chromium checks at `https://gjakova-grants.netlify.app` returned HTTP 200 for applicant and staff pages, found the exact tutorial link, opened the expected YouTube video in a new tab, and found no page errors or horizontal overflow. The public asset hashes matched the verified local build. Typecheck, production build and high-severity npm audit passed; the audit found zero vulnerabilities.
+
+## Public document-reading repair — 27 September 2026, 08:47 UTC
+
+The current `https://gjakova-grants.netlify.app` is a **Git-connected** Netlify site (`58029398-6cb5-46bb-8525-7700b75e46dd`) sourced from `OLT11GAMER/gjakova-grants` at commit `957957da0748d4150d45cb9d68a97be33517e8fa`. The previous CLI site with ID `e4f96861-f0f8-428e-a6b7-913ee16064de` is now named `gjg-old`. The earlier CLI deployment record below is historical.
+
+A fresh public-browser read from `/api/document-assist` returned HTTP 502 JSON `network`, and the applicant saw “Lidhja dështoi.” The new Git-connected site had **no production value** for `AI_DEMO_FIXTURE`. Set `AI_DEMO_FIXTURE=1` on that site for production and deploy previews, without adding a live AI credential. Triggered a Git-connected rebuild from the same commit; deploy `6ab8d7afcae56ed4c97e9c70` reached `ready` and was published. A fresh Chromium profile then returned HTTP 200 JSON with `provenance: simulated` and a structured result; the quiet simulated disclosure appeared once and there were zero browser console/runtime errors. No application source was changed for this repair. Live AI remains unverified.
+
 ## Final UI/product polish and scanner — local verification, 27 September 2026
 
-**Status:** The applicant and staff polish pass is implemented and verified locally. These uncommitted UI changes and refreshed screenshots have **not** been pushed or deployed. The public Netlify URL documented below still represents its earlier deployed source state. Milestone 6 and live AI remain outside this pass.
+**Status at the time of this local verification:** The applicant and staff polish pass was verified locally. Its later personal-repository deployment is recorded above. Milestone 6 and live AI remain outside this pass.
 
 - Replaced most filled status pills with Lucide icon plus text, changed mandatory labels to an asterisk, simplified page headers, grant listing/detail, document rows, correction, history and archive. Demo and local-storage wording was removed from primary UI. The closed call, no official filing, browser-local role switch, simulated document result, unregistered SMAED state and empty protocol reference remain truthful in context. Internal demo identifiers and persisted data shape were retained; the displayed case reference omits the internal `DEMO` segment.
 - Actual official call PDF stays linked to the municipality source. Bundled example documents, offer v1/v2 and the generated application use a clearly identified structured/scan **fallback preview** because no corresponding PDF binary is bundled. The archive control downloads a JSON manifest, not a PDF or SMAED submission. Document reading still calls `/api/document-assist` and shows a quiet simulated-result disclosure.
@@ -13,9 +23,9 @@
 - Scanner verification now covers mocked camera-permission denial with the photo fallback, image selection, crop preview, capture via Chromium's fake camera, rescan, save into the offer's existing version history, readiness update and explicit simulated reading/confirmation. The full same-case applicant-to-staff correction and archive replay completed with no browser errors. No physical camera permission dialog was available; see the scanner record below for scope and limits.
 - `npm run typecheck`, `npm run build`, and `npm audit --audit-level=high` passed after the visual changes; audit found zero vulnerabilities. The scanner-related source and screenshots were preserved in the shared working tree.
 
-**Remaining limits:** This remains a synthetic Team Pooks hackathon prototype with browser-local state, same-browser role switching, no official filing or SMAED connection, no authentication, no durable audit trail and no verified live AI. The current polish has only local verification until a later authorized Git/Netlify update.
+**Remaining limits:** This remains a synthetic Team Pooks hackathon prototype with browser-local state, same-browser role switching, no official filing or SMAED connection, no authentication, no durable audit trail and no verified live AI.
 
-## Verified public deployment — 27 September 2026
+## Earlier CLI public deployment (superseded site) — 27 September 2026
 
 **Status: PUBLIC DEMO DEPLOYED AND VERIFIED; PERSONAL MIRROR PUSHED.** Official team repository: https://github.com/AI4Society-Hachathon/Team-Pooks. Personal public mirror: https://github.com/OLT11GAMER/gjakova-grants. Both branches `main` are verified at commit `d6d63d1380fe899a0efc347231e23e4903704a10` as of this verification. Netlify public demo: https://gjakova-grants.netlify.app. Netlify site: `gjakova-grants` (site ID `e4f96861-f0f8-428e-a6b7-913ee16064de`). Current deployment mode: **CLI DEPLOYMENT** from the verified tree; the site is not yet Git-connected to the personal mirror. Draft tested: https://6ab8a40ddac3132856edcc53--gjakova-grants.netlify.app. Verification timestamp: 2026-09-27 05:45 UTC. To enable the requested Git-connected deployment source, Netlify must be authorized to configure GitHub webhooks and deploy keys for the personal repository; this authorization remains pending.
 
